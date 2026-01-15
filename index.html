@@ -431,6 +431,12 @@
                 height: 65px;
             }
 
+            .btn-switch {
+                width: 45px;
+                height: 45px;
+                font-size: 1.1em;
+            }
+
             .modal {
                 padding: 20px;
             }
@@ -496,7 +502,9 @@
                         <button class="btn-capture" onclick="takePhoto()">
                             📸
                         </button>
-                        <div style="width: 50px;"></div>
+                        <button class="btn-switch" onclick="openGallery()" title="Upload dari Galeri">
+                            🖼️
+                        </button>
                     </div>
                 </div>
             </div>
@@ -544,6 +552,9 @@
     </div>
 
     <canvas id="canvas"></canvas>
+    
+    <!-- Hidden file input for gallery -->
+    <input type="file" id="fileInput" accept="image/*" style="display: none;">
 
     <script>
         let stream = null;
@@ -562,6 +573,7 @@
         const badgeModal = document.getElementById('badgeModal');
         const badgeGrid = document.getElementById('badgeGrid');
         const dragHint = document.getElementById('dragHint');
+        const fileInput = document.getElementById('fileInput');
         const ctx = canvas.getContext('2d');
 
         // Badge list
@@ -680,6 +692,62 @@
             const newFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
             startCamera(newFacingMode);
         }
+
+        // Open gallery to select image
+        function openGallery() {
+            fileInput.click();
+        }
+
+        // Handle file selection from gallery
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (!file.type.startsWith('image/')) {
+                alert('Pilih file gambar yang valid!');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    // Determine canvas size based on image orientation
+                    const isImagePortrait = img.height > img.width;
+                    
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // Draw uploaded image
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // Select appropriate frame based on image orientation
+                    const frameToUse = isImagePortrait ? framePortrait : frameLandscape;
+                    
+                    if (frameToUse.complete && frameToUse.naturalHeight !== 0) {
+                        ctx.drawImage(frameToUse, 0, 0, canvas.width, canvas.height);
+                        showPreview();
+                    } else {
+                        frameToUse.onload = function() {
+                            ctx.drawImage(frameToUse, 0, 0, canvas.width, canvas.height);
+                            showPreview();
+                        };
+                        frameToUse.onerror = function() {
+                            alert('Frame tidak ditemukan!');
+                            showPreview();
+                        };
+                    }
+                };
+                img.onerror = function() {
+                    alert('Gagal memuat gambar!');
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+            
+            // Reset file input
+            fileInput.value = '';
+        });
 
         function takePhoto() {
             const videoWidth = video.videoWidth;
@@ -871,58 +939,6 @@
                 const badgeImg = badgeImages[selectedBadge.id];
                 
                 if (badgeImg.complete) {
-                    // Calculate sticker position relative to canvas
+                    // Get preview image actual rendered size and position
                     const previewRect = preview.getBoundingClientRect();
-                    const stickerRect = stickerElement.getBoundingClientRect();
-                    
-                    // Calculate scale factor between preview and actual canvas
-                    const scaleX = canvas.width / previewRect.width;
-                    const scaleY = canvas.height / previewRect.height;
-                    
-                    // Calculate position on canvas
-                    const stickerLeft = (stickerRect.left - previewRect.left) * scaleX;
-                    const stickerTop = (stickerRect.top - previewRect.top) * scaleY;
-                    
-                    // Sticker size (250x250 original, scaled to canvas)
-                    const stickerSize = 250 * Math.min(scaleX, scaleY) * 0.5;
-                    
-                    finalCtx.drawImage(badgeImg, stickerLeft, stickerTop, stickerSize, stickerSize);
-                }
-            }
-            
-            const link = document.createElement('a');
-            link.download = `veteran7680-${Date.now()}.jpg`;
-            link.href = finalCanvas.toDataURL('image/jpeg', 0.95);
-            link.click();
-            
-            setTimeout(() => {
-                selectedBadge = null;
-                removeSticker();
-                showScreen('cameraScreen');
-                startCamera(currentFacingMode);
-            }, 500);
-        }
-
-        function retakePhoto() {
-            selectedBadge = null;
-            removeSticker();
-            showScreen('cameraScreen');
-            startCamera(currentFacingMode);
-        }
-
-        // Listen for orientation changes
-        window.addEventListener('resize', updateOrientation);
-        window.addEventListener('orientationchange', () => {
-            setTimeout(updateOrientation, 100);
-        });
-
-        window.addEventListener('load', () => {
-            updateOrientation();
-            populateBadgeGrid();
-            startCamera('user');
-        });
-
-        window.addEventListener('beforeunload', stopCamera);
-    </script>
-</body>
-</html>
+                    const stickerRect = stickerElement.getBoun
