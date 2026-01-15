@@ -941,4 +941,60 @@
                 if (badgeImg.complete) {
                     // Get preview image actual rendered size and position
                     const previewRect = preview.getBoundingClientRect();
-                    const stickerRect = stickerElement.getBoun
+                    const stickerRect = stickerElement.getBoundingClientRect();
+                    
+                    // Calculate scale factor between preview display and actual canvas
+                    const scaleX = canvas.width / previewRect.width;
+                    const scaleY = canvas.height / previewRect.height;
+                    
+                    // Calculate sticker position on canvas (relative to preview image)
+                    const stickerLeft = (stickerRect.left - previewRect.left) * scaleX;
+                    const stickerTop = (stickerRect.top - previewRect.top) * scaleY;
+                    
+                    // Sticker size - use the ACTUAL displayed sticker size scaled to canvas
+                    const stickerDisplayWidth = stickerElement.offsetWidth;
+                    const stickerDisplayHeight = stickerElement.offsetHeight;
+                    
+                    const stickerCanvasWidth = stickerDisplayWidth * scaleX;
+                    const stickerCanvasHeight = stickerDisplayHeight * scaleY;
+                    
+                    finalCtx.drawImage(badgeImg, stickerLeft, stickerTop, stickerCanvasWidth, stickerCanvasHeight);
+                }
+            }
+            
+            const link = document.createElement('a');
+            link.download = `veteran7680-${Date.now()}.jpg`;
+            link.href = finalCanvas.toDataURL('image/jpeg', 0.95);
+            link.click();
+            
+            setTimeout(() => {
+                selectedBadge = null;
+                removeSticker();
+                showScreen('cameraScreen');
+                startCamera(currentFacingMode);
+            }, 500);
+        }
+
+        function retakePhoto() {
+            selectedBadge = null;
+            removeSticker();
+            showScreen('cameraScreen');
+            startCamera(currentFacingMode);
+        }
+
+        // Listen for orientation changes
+        window.addEventListener('resize', updateOrientation);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(updateOrientation, 100);
+        });
+
+        window.addEventListener('load', () => {
+            updateOrientation();
+            populateBadgeGrid();
+            startCamera('user');
+        });
+
+        window.addEventListener('beforeunload', stopCamera);
+    </script>
+</body>
+</html>
